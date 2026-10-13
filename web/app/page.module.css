@@ -1,0 +1,112 @@
+.main {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 16px;
+}
+
+.header h1 {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.header p {
+  color: var(--muted);
+  margin-bottom: 32px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.fieldset {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.fieldset legend {
+  font-weight: 600;
+  padding: 0 8px;
+}
+
+.fieldset label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.fieldset input {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input);
+  color: var(--foreground);
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.mono {
+  font-family: var(--font-geist-mono), monospace;
+  text-transform: uppercase;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.button {
+  font: inherit;
+  font-weight: 600;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.errors {
+  list-style: none;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.success {
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--success-bg);
+}
+
+.success dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin-top: 12px;
+}
+
+.success dt {
+  color: var(--muted);
+}
+
+.success dd {
+  font-weight: 600;
+}
