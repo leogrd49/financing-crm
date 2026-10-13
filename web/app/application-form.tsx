@@ -15,6 +15,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const euros = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
+const percent = new Intl.NumberFormat("fr-FR", { style: "percent", maximumFractionDigits: 2 });
 
 export function ApplicationForm() {
   const [state, formAction, pending] = useActionState(submitApplication, initialState);
@@ -82,7 +83,7 @@ export function ApplicationForm() {
             </p>
             <dl>
               <dt>Taux appliqué</dt>
-              <dd>{state.application.interestRate} %</dd>
+              <dd>{percent.format(state.application.interestRate / 100)}</dd>
               <dt>Mensualité</dt>
               <dd>{state.application.monthlyPayment == null ? "—" : euros.format(state.application.monthlyPayment)}</dd>
               <dt>Score de risque</dt>
