@@ -1,58 +1,170 @@
-# Salesforce DX Project
+# Financing CRM — mini-CRM de financement auto sur Salesforce
 
-Salesforce DX is a development approach that brings source-driven development, team collaboration, and continuous integration to the Salesforce Platform. Instead of working directly in an org through a web browser, you work with metadata as source files in a local DX project, track changes in version control, and deploy through automated processes.
+![CI](../../actions/workflows/ci.yml/badge.svg)
 
-This project template gets you started with the tools and structure you need to build Salesforce applications using source control, scratch orgs, and the Salesforce CLI.
+Projet portfolio qui couvre le spectre d'un développeur Salesforce : **modèle de données, automatisation déclarative, Apex bulkifié et testé, intégrations REST entrante et sortante, LWC et CI/CD**.
 
-## Prerequisites
+Un conseiller gère des dossiers de financement auto. Un client peut déposer une demande depuis un formulaire web externe. Le véhicule est identifié automatiquement à partir de son VIN grâce à l'API publique de la NHTSA. La mensualité et un score de risque sont calculés côté serveur, et les gros montants partent en approbation.
 
-Before you start, make sure you have:
+|                  |                                                                                                                 |
+| ---------------- | --------------------------------------------------------------------------------------------------------------- |
+| Tests Apex       | **34**, couverture **97 %**, dont un test en lot de 200 enregistrements avec un utilisateur aux droits minimaux |
+| Tests LWC (Jest) | **13**                                                                                                          |
+| Pipeline         | GitHub Actions : lint + Jest + build du formulaire + validation/déploiement Salesforce avec tests               |
 
-- **Salesforce CLI** - Download from [developer.salesforce.com/tools/salesforcecli](https://developer.salesforce.com/tools/salesforcecli). See [Install Salesforce CLI](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_install_cli.htm) for details.
-- **VS Code with Salesforce Extension Pack** - See [Installation Instructions](https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/install.html) for details. Includes the Agentforce Vibes extension.
-- **A development org** - Sign up for a free Developer Edition org [here](https://developer.salesforce.com/signup).
-- **Dev Hub enabled** (optional, required to create scratch orgs) - You can enable Dev Hub in your development org under Setup > Dev Hub.  See [Provide Developers Access to Salesforce DX Tools](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_setup_dx_tools.htm).
+![Formulaire web connecté à Salesforce](docs/web-form.png)
 
-## Project Structure
+---
 
-Your DX project follows this structure:
+## Architecture
 
-- **`force-app/main/default/`** - Your metadata source files live in this default package directory. You can configure additional package directories in the `sfdx-project.json` file.
-- **`config/`** - Scratch org definitions and project settings
-- **`scripts/`** - Automation scripts for common tasks
-- **`sfdx-project.json`** - Project manifest that defines package directories, namespace, API version, and other project-level settings
+```mermaid
+flowchart LR
+    subgraph Web["Formulaire web (Next.js)"]
+        F[Formulaire] --> SA[Server Action<br/>secret côté serveur]
+    end
 
-See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm).
+    subgraph SF["Salesforce"]
+        API["Apex REST<br/>/financing-applications"]
+        TRG_FA["Trigger dossier<br/>mensualité + score"]
+        FLOW["Flow On Submit<br/>tâche + email"]
+        APP["Approbation<br/>> seuil"]
+        TRG_V["Trigger véhicule"]
+        Q["Queueable<br/>décodage VIN"]
+        LWC["LWC loanSimulator"]
+        CMDT[("Custom Metadata<br/>seuil, taux, score max")]
+    end
 
-## Get Started
+    NHTSA["API NHTSA vPIC"]
 
-Ready to start developing? The [Get Started with Salesforce DX](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_get_started_dx.htm) guide walks you through your first project, from creating a scratch org to creating a simple Apex class or LWC to deploying your code to a sandbox.
+    SA -- "OAuth 2.0<br/>Client Credentials" --> API
+    API --> TRG_FA
+    API --> TRG_V
+    TRG_FA --> FLOW --> APP
+    TRG_V --> Q -- "Named Credential<br/>50 VIN / appel" --> NHTSA
+    LWC -- "@AuraEnabled" --> TRG_FA
+    CMDT -.-> TRG_FA
+    CMDT -.-> FLOW
+    CMDT -.-> API
+```
 
-## Common Salesforce CLI Commands
+## Modèle de données
 
-Here are common CLI commands that you'll use the most:
+```mermaid
+erDiagram
+    Account ||--o{ Financing_Application__c : "Account__c"
+    Contact ||--o{ Financing_Application__c : "Borrower__c"
+    Vehicle__c ||--o{ Financing_Application__c : "Vehicle__c"
 
-- `sf org login web`: Authorize an org
-- `sf org open`: Open your org in a browser
-- `sf org create scratch`: Create a scratch org
-- `sf project deploy start`: Deploy metadata to your org
-- `sf project retrieve start`: Retrieve metadata from your org
-- `sf template generate <artifact>`: Scaffold new components, such as Apex classes and triggers, LWC components, Lightning apps, and more
-- `sf apex <command>`: Run Apex tests, run anonymous Apex blocks, and view logs
-- `sf data <command>`: Work with test data
-- `sf alias <command>`: Manage org aliases
-- `sf config <command>`: Configure CLI settings
+    Financing_Application__c {
+        Currency Amount__c
+        Number Term_Months__c "12 à 96"
+        Percent Interest_Rate__c
+        Picklist Status__c "Draft → Submitted → In_Approval → Approved / Rejected"
+        Currency Monthly_Payment__c "calculé par Apex"
+        Number Risk_Score__c "0-100, calculé par Apex"
+    }
+    Vehicle__c {
+        Text VIN__c "17 car., unique, External ID"
+        Text Make__c "rempli par NHTSA"
+        Text Model__c "rempli par NHTSA"
+        Number Year__c "rempli par NHTSA"
+        Picklist Decode_Status__c "Pending / Success / Error"
+    }
+```
 
-## Use Agentforce Vibes to Build Lightning Apps
+Les **lookups** (et non des master-detail) permettent à un véhicule d'avoir plusieurs dossiers dans le temps, et à un dossier d'exister avant d'être rattaché à un compte.
 
-Transform your ideas into custom Lightning apps that extend CRM workflows directly in Lightning Experience. Through natural conversations with Agentforce Vibes, implement custom objects and fields, complex business logic, and dynamic UI components. See [Build a Lightning App Using Agentforce Vibes](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/lexapp-overview.html).
+---
 
-## Additional Resources
+## Fonctionnalités et choix techniques
 
-- [Agentforce Vibes Developer Guide](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/einstein-overview.html)
-- [Salesforce CLI Installation Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/)
-- [Salesforce CLI Plugin Development Guide](https://developer.salesforce.com/docs/platform/salesforce-cli-plugin/guide/conceptual-overview.html)
-- [Salesforce VS Code Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
+### Déclaratif
 
+- **Règles de validation** : montant positif, durée de 12 à 96 mois, taux ≥ 0, VIN au bon format (`REGEX`, sans I, O ni Q).
+- **Record-triggered Flow** : au passage à « Soumis », il crée une tâche de revue et envoie un email. Un _fault path_ évite qu'un échec d'email annule l'enregistrement.
+- **Approval Process** au-delà d'un seuil. Les critères d'entrée d'une approbation ne savent pas lire le Custom Metadata : c'est donc le Flow qui lit le seuil et soumet le dossier.
+- **Custom Metadata** `Financing_Setting__mdt` : seuil d'approbation, taux par défaut, score maximum. Aucune valeur métier n'est codée en dur.
+- **Rapports et dashboard** du pipeline.
+
+### Apex
+
+- Un **trigger par objet, sans logique**, qui délègue à un handler.
+- **Bulkification** : aucune requête SOQL ni DML dans une boucle. Le test sur 200 enregistrements vérifie que le trigger consomme **0 requête SOQL** (le Custom Metadata est lu via `getInstance()`).
+- La **mensualité** est calculée par `LoanCalculator` (prêt amortissable, cas du taux nul, arrondi en `HALF_UP`), et le **score de risque** par `RiskScoreCalculator`.
+- **Sécurité** : `with sharing`, `WITH USER_MODE` et `insert as user`. Les tests passent par un utilisateur qui n'a que le permission set.
+
+### Intégration sortante : décodage du VIN
+
+- **Named Credential** + **External Credential**. L'API NHTSA est publique, mais le protocole `NoAuthentication` est refusé au déploiement : la solution est le protocole `Custom`, sans aucun secret.
+- **Un seul Queueable par transaction**, qui utilise l'endpoint `DecodeVINValuesBatch` (50 VIN par appel). Au-delà de 50, le job s'enchaîne.
+- **Garde anti-boucle** : seul un changement de VIN relance un décodage.
+- **Erreurs tracées** sur l'enregistrement (`Decode_Status__c`, `Decode_Message__c`) plutôt que perdues en silence.
+- Tests avec `HttpCalloutMock`.
+
+### Intégration entrante : API REST
+
+- `POST /services/apexrest/financing-applications` renvoie **201** ou **400** avec un tableau `errors[]`. `GET /{id}` renvoie **200** ou **404**.
+- **Upsert du véhicule par VIN** (External ID), et **savepoint** : en cas d'erreur, rien n'est enregistré.
+- **Canal public = données non fiables** : le **taux n'est jamais fourni par l'appelant**, il vient du Custom Metadata. L'emprunteur est **toujours créé comme nouveau contact** (`LeadSource = Web`), jamais rattaché à un client existant sur la seule foi d'un email non vérifié.
+
+### Formulaire web (Next.js)
+
+- **OAuth 2.0 Client Credentials** via une **External Client App**, déployée en métadonnées. L'appel s'exécute sous un **utilisateur d'intégration** : licence _Salesforce Integration_ (API uniquement) et permission set minimal.
+- Une **Server Action** fait l'appel. Le module `server-only` fait échouer le build si le client Salesforce fuit vers le navigateur, et le secret reste dans `.env.local`.
+
+### LWC `loanSimulator`
+
+- `@wire(getRecord)`, **recalcul instantané** en JavaScript avec la même formule que l'Apex. Les tests Jest réutilisent les cas des tests Apex.
+- Le bouton « Appliquer » appelle `@AuraEnabled`, puis `notifyRecordUpdateAvailable`. **Le navigateur n'envoie jamais la mensualité** : le trigger la recalcule côté serveur.
+- Seul un brouillon est modifiable. C'est contrôlé côté serveur **et** côté interface.
+
+---
+
+## Démarrer
+
+Prérequis : [Salesforce CLI](https://developer.salesforce.com/tools/salesforcecli), Node.js 22+, une org Developer Edition (un _Trailhead Playground_ convient).
+
+```bash
+# 1. Se connecter à l'org et déployer
+sf org login web --alias dev --set-default
+sf project deploy start --source-dir force-app --test-level RunLocalTests
+sf org assign permset --name Financing_User
+
+# 2. Utilisateur d'intégration du formulaire web
+sf apex run --file scripts/apex/create-integration-user.apex
+
+# 3. Tests
+sf apex run test --test-level RunLocalTests --code-coverage --result-format human
+npm install && npm run test:unit
+```
+
+> Quelques métadonnées référencent des noms d'utilisateur propres à l'org d'origine : l'approbateur, l'utilisateur du dashboard et le _Run As_ de l'External Client App. Il faut les adapter avant de déployer sur une autre org.
+
+**Formulaire web**
+
+```bash
+cd web
+cp .env.example .env.local   # puis renseigner la Consumer Key et le Consumer Secret de l'External Client App
+npm install
+npm run dev
+```
+
+**CI** : ajouter le secret GitHub `SF_AUTH_URL`, obtenu avec `sf org auth show-sfdx-auth-url`. Sans ce secret, les jobs lint, Jest et build tournent quand même, et le déploiement est ignoré.
+
+## Structure
+
+```
+force-app/main/default/
+├── classes/          Apex : handlers, calculs, API REST, intégration NHTSA, contrôleur LWC, tests
+├── triggers/         FinancingApplicationTrigger, VehicleTrigger
+├── lwc/loanSimulator/ composant + loanMath.js + tests Jest
+├── flows/            Financing_Application_On_Submit
+├── approvalProcesses/, workflows/   approbation + mises à jour de statut
+├── objects/          Vehicle__c, Financing_Application__c, Financing_Setting__mdt
+├── externalCredentials/, namedCredentials/, externalClientApps/, extlClnt*/
+└── permissionsets/   Financing_User, Financing_Integration
+scripts/apex/         création de l'utilisateur d'intégration
+web/                  formulaire Next.js
+.github/workflows/    CI
+```

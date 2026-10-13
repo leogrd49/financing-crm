@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lwc:
+    name: LWC — lint + Jest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:unit -- --coverage
+
+  web:
+    name: Formulaire web — lint + typecheck + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run build
+
+  salesforce:
+    name: Salesforce — tests Apex + déploiement
+    needs: lwc
+    runs-on: ubuntu-latest
+    env:
+      # URL d'authentification de l'org (sf org auth show-sfdx-auth-url), stockée en secret GitHub
+      SF_AUTH_URL: ${{ secrets.SF_AUTH_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Secret SF_AUTH_URL absent
+        if: env.SF_AUTH_URL == ''
+        run: 'echo "::warning::Secret SF_AUTH_URL non configuré, validation et déploiement Salesforce ignorés."'
+
+      - uses: actions/setup-node@v4
+        if: env.SF_AUTH_URL != ''
+        with:
+          node-version: 22
+
+      - name: Installer la CLI Salesforce
+        if: env.SF_AUTH_URL != ''
+        run: npm install --global @salesforce/cli
+
+      - name: Se connecter à l'org
+        if: env.SF_AUTH_URL != ''
+        run: |
+          echo "$SF_AUTH_URL" > "$RUNNER_TEMP/auth-url.txt"
+          sf org login sfdx-url --sfdx-url-file "$RUNNER_TEMP/auth-url.txt" --alias ci --set-default
+          rm "$RUNNER_TEMP/auth-url.txt"
+
+      # Pull request : on vérifie que tout se déploie et que les tests passent, sans rien modifier
+      - name: Valider le déploiement (pull request)
+        if: env.SF_AUTH_URL != '' && github.event_name == 'pull_request'
+        run: sf project deploy validate --source-dir force-app --test-level RunLocalTests --coverage-formatters text --wait 30
+
+      # main : déploiement réel, tests Apex obligatoires
+      - name: Déployer (main)
+        if: env.SF_AUTH_URL != '' && github.event_name != 'pull_request'
+        run: sf project deploy start --source-dir force-app --test-level RunLocalTests --coverage-formatters text --wait 30
