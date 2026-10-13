@@ -150,7 +150,8 @@ npm install
 npm run dev
 ```
 
-**CI** : ajouter le secret GitHub `SF_AUTH_URL`, obtenu avec `sf org auth show-sfdx-auth-url`. Sans ce secret, les jobs lint, Jest et build tournent quand même, et le déploiement est ignoré.
+**CI** : créer l'environnement GitHub `salesforce-org` (Settings → Environments), le restreindre à la branche `main`, puis y ajouter le secret `SF_AUTH_URL`, obtenu avec `sf org auth show-sfdx-auth-url`.
+Les pull requests ne reçoivent jamais ce secret : elles passent seulement le lint, Jest et le build. Seul `main` est déployé, avec les tests Apex obligatoires.
 
 ## Structure
 

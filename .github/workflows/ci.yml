@@ -47,26 +47,31 @@ jobs:
 
   salesforce:
     name: Salesforce — tests Apex + déploiement
-    needs: lwc
+    needs: [lwc, web]
+    # Le secret donne un accès admin à l'org : seul le code de main est déployé.
+    # Les pull requests ne reçoivent jamais le secret (lint, Jest et build seulement).
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    # Secret stocké dans l'environnement GitHub "salesforce-org", restreint à la branche main
+    environment: salesforce-org
     env:
-      # URL d'authentification de l'org (sf org auth show-sfdx-auth-url), stockée en secret GitHub
       SF_AUTH_URL: ${{ secrets.SF_AUTH_URL }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Secret SF_AUTH_URL absent
         if: env.SF_AUTH_URL == ''
-        run: 'echo "::warning::Secret SF_AUTH_URL non configuré, validation et déploiement Salesforce ignorés."'
+        run: 'echo "::warning::Secret SF_AUTH_URL non configuré, déploiement Salesforce ignoré."'
 
       - uses: actions/setup-node@v4
         if: env.SF_AUTH_URL != ''
         with:
           node-version: 22
 
+      # Version figée : pas de mise à jour silencieuse d'un outil qui manipule le secret
       - name: Installer la CLI Salesforce
         if: env.SF_AUTH_URL != ''
-        run: npm install --global @salesforce/cli
+        run: npm install --global @salesforce/cli@2.153.5
 
       - name: Se connecter à l'org
         if: env.SF_AUTH_URL != ''
@@ -75,12 +80,6 @@ jobs:
           sf org login sfdx-url --sfdx-url-file "$RUNNER_TEMP/auth-url.txt" --alias ci --set-default
           rm "$RUNNER_TEMP/auth-url.txt"
 
-      # Pull request : on vérifie que tout se déploie et que les tests passent, sans rien modifier
-      - name: Valider le déploiement (pull request)
-        if: env.SF_AUTH_URL != '' && github.event_name == 'pull_request'
-        run: sf project deploy validate --source-dir force-app --test-level RunLocalTests --coverage-formatters text --wait 30
-
-      # main : déploiement réel, tests Apex obligatoires
-      - name: Déployer (main)
-        if: env.SF_AUTH_URL != '' && github.event_name != 'pull_request'
+      - name: Déployer avec les tests Apex
+        if: env.SF_AUTH_URL != ''
         run: sf project deploy start --source-dir force-app --test-level RunLocalTests --coverage-formatters text --wait 30
