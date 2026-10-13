@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExternalClientApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <contactEmail>financing-crm-admin@example.com</contactEmail>
+    <description>Formulaire web Next.js : cree des dossiers via FinancingApplicationApi (OAuth Client Credentials).</description>
+    <distributionState>Local</distributionState>
+    <isProtected>false</isProtected>
+    <label>Financing Web Form</label>
+</ExternalClientApplication>
