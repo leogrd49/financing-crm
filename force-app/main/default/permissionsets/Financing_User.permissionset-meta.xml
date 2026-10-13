@@ -7,6 +7,10 @@
         <application>Financing_CRM</application>
         <visible>true</visible>
     </applicationVisibilities>
+    <externalCredentialPrincipalAccesses>
+        <enabled>true</enabled>
+        <externalCredentialPrincipal>NHTSA_vPIC-DefaultPrincipal</externalCredentialPrincipal>
+    </externalCredentialPrincipalAccesses>
     <fieldPermissions>
         <editable>true</editable>
         <field>Financing_Application__c.Account__c</field>
@@ -50,6 +54,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Vehicle__c.Year__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>Vehicle__c.Decode_Message__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

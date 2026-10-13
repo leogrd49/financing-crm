@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Decode_Message__c</fullName>
+    <label>Decode Message</label>
+    <type>Text</type>
+    <length>255</length>
+    <inlineHelpText>Retour de l'API NHTSA lors du dernier décodage du VIN.</inlineHelpText>
+</CustomField>
