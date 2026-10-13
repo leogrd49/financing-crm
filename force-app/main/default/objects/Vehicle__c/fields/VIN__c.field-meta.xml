@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>VIN__c</fullName>
+    <label>VIN</label>
+    <type>Text</type>
+    <length>17</length>
+    <required>true</required>
+    <unique>true</unique>
+    <caseSensitive>false</caseSensitive>
+    <externalId>true</externalId>
+    <inlineHelpText>Vehicle Identification Number : 17 caracteres, sans I, O ni Q.</inlineHelpText>
+</CustomField>

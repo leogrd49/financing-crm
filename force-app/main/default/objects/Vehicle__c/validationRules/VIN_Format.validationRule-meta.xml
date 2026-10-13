@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>VIN_Format</fullName>
+    <active>true</active>
+    <errorConditionFormula>NOT(REGEX(VIN__c, &quot;^[A-HJ-NPR-Z0-9]{17}$&quot;))</errorConditionFormula>
+    <errorDisplayField>VIN__c</errorDisplayField>
+    <errorMessage>VIN invalide : 17 caractères, sans I, O ni Q.</errorMessage>
+</ValidationRule>

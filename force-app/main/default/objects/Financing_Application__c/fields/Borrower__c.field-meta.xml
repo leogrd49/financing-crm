@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Borrower__c</fullName>
+    <label>Borrower</label>
+    <type>Lookup</type>
+    <referenceTo>Contact</referenceTo>
+    <relationshipName>Financing_Applications</relationshipName>
+    <relationshipLabel>Financing Applications</relationshipLabel>
+    <deleteConstraint>SetNull</deleteConstraint>
+</CustomField>
