@@ -1,0 +1,115 @@
+<template>
+  <lightning-card title="Simulateur de prêt" icon-name="custom:custom17">
+    <div class="slds-var-p-horizontal_medium">
+      <template lwc:if={record}>
+        <p class="slds-text-color_weak slds-var-m-bottom_small">
+          Montant financé :
+          <lightning-formatted-number
+            value={amount}
+            format-style="currency"
+            currency-code="EUR"
+          ></lightning-formatted-number>
+        </p>
+
+        <lightning-slider
+          label="Durée (mois)"
+          min="12"
+          max="96"
+          step="1"
+          value={termMonths}
+          onchange={handleTermChange}
+          data-id="term"
+        ></lightning-slider>
+
+        <lightning-input
+          type="number"
+          label="Taux annuel (%)"
+          min="0"
+          step="0.01"
+          value={interestRate}
+          onchange={handleRateChange}
+          data-id="rate"
+        ></lightning-input>
+
+        <dl class="slds-list_horizontal slds-wrap slds-var-m-top_medium">
+          <dt class="slds-item_label slds-text-color_weak">
+            Mensualité actuelle
+          </dt>
+          <dd class="slds-item_detail">
+            <lightning-formatted-number
+              value={currentPayment}
+              format-style="currency"
+              currency-code="EUR"
+            ></lightning-formatted-number>
+          </dd>
+          <dt class="slds-item_label slds-text-color_weak">
+            Mensualité simulée
+          </dt>
+          <dd class="slds-item_detail slds-text-title_bold" data-id="simulated">
+            <lightning-formatted-number
+              value={simulatedPayment}
+              format-style="currency"
+              currency-code="EUR"
+            ></lightning-formatted-number>
+          </dd>
+          <dt class="slds-item_label slds-text-color_weak">Écart</dt>
+          <dd class={differenceClass} data-id="difference">
+            <lightning-formatted-number
+              value={paymentDifference}
+              format-style="currency"
+              currency-code="EUR"
+            ></lightning-formatted-number>
+          </dd>
+          <dt class="slds-item_label slds-text-color_weak">
+            Coût total des intérêts
+          </dt>
+          <dd class="slds-item_detail">
+            <lightning-formatted-number
+              value={simulatedTotalInterest}
+              format-style="currency"
+              currency-code="EUR"
+            ></lightning-formatted-number>
+          </dd>
+        </dl>
+
+        <template lwc:if={isDraft}>
+          <div class="slds-var-m-top_medium">
+            <lightning-button
+              label="Réinitialiser"
+              onclick={handleReset}
+              disabled={isSaving}
+            ></lightning-button>
+            <lightning-button
+              class="slds-var-m-left_x-small"
+              variant="brand"
+              label="Appliquer au dossier"
+              onclick={handleApply}
+              disabled={isApplyDisabled}
+              data-id="apply"
+            ></lightning-button>
+          </div>
+        </template>
+        <template lwc:else>
+          <p
+            class="slds-var-m-top_medium slds-text-color_weak"
+            data-id="locked"
+          >
+            Simulation uniquement : seul un dossier en brouillon peut être
+            modifié.
+          </p>
+        </template>
+      </template>
+
+      <template lwc:elseif={error}>
+        <p class="slds-text-color_error">{errorMessage}</p>
+      </template>
+
+      <template lwc:else>
+        <lightning-spinner
+          alternative-text="Chargement"
+          size="small"
+        ></lightning-spinner>
+      </template>
+    </div>
+  </lightning-card>
+</template>
