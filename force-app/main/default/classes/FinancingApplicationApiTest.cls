@@ -4,7 +4,8 @@ private class FinancingApplicationApiTest {
         new Map<String, Object>{
             'amount' => 20000,
             'termMonths' => 48,
-            'interestRate' => 5,
+            // Tentative d'imposer un taux à 0 % : doit être ignorée
+            'interestRate' => 0,
             'vin' => NhtsaHttpMock.HONDA_VIN,
             'borrower' => new Map<String, Object>{ 'firstName' => 'Marie', 'lastName' => 'Martin', 'email' => 'Marie.Martin@example.com' }
         }
@@ -35,20 +36,27 @@ private class FinancingApplicationApiTest {
         Assert.areEqual(FinancingApplicationApi.HTTP_CREATED, RestContext.response.statusCode, RestContext.response.responseBody.toString());
         Map<String, Object> body = responseBody();
         Assert.areEqual('Draft', body.get('status'));
-        Assert.areEqual(460.59, (Decimal) body.get('monthlyPayment'), 'Le trigger a calculé la mensualité');
+        Decimal defaultRate = FinancingApplicationApi.getDefaultInterestRate();
+        Assert.areEqual(defaultRate, (Decimal) body.get('interestRate'), 'Le taux vient du Custom Metadata, pas de l\'appelant');
+        Assert.areEqual(
+            LoanCalculator.monthlyPayment(20000, defaultRate, 48),
+            (Decimal) body.get('monthlyPayment'),
+            'Le trigger a calculé la mensualité au taux par défaut'
+        );
 
         Financing_Application__c application = [
-            SELECT Vehicle__r.VIN__c, Vehicle__r.Make__c, Borrower__r.Email
+            SELECT Vehicle__r.VIN__c, Vehicle__r.Make__c, Borrower__r.Email, Borrower__r.LeadSource
             FROM Financing_Application__c
             WHERE Id = :(String) body.get('id')
         ];
         Assert.areEqual(NhtsaHttpMock.HONDA_VIN, application.Vehicle__r.VIN__c);
         Assert.areEqual('HONDA', application.Vehicle__r.Make__c, 'Le nouveau véhicule a été décodé');
         Assert.areEqual('marie.martin@example.com', application.Borrower__r.Email, 'Email normalisé en minuscules');
+        Assert.areEqual(FinancingApplicationApi.LEAD_SOURCE_WEB, application.Borrower__r.LeadSource);
     }
 
     @IsTest
-    static void reusesExistingVehicleAndBorrower() {
+    static void reusesVehicleButNeverAttachesToExistingContact() {
         Test.setMock(HttpCalloutMock.class, new NhtsaHttpMock());
         Vehicle__c vehicle = new Vehicle__c(VIN__c = NhtsaHttpMock.HONDA_VIN);
         insert vehicle;
@@ -62,10 +70,14 @@ private class FinancingApplicationApiTest {
 
         Assert.areEqual(FinancingApplicationApi.HTTP_CREATED, RestContext.response.statusCode);
         Assert.areEqual(1, [SELECT COUNT() FROM Vehicle__c], 'Upsert par VIN : pas de doublon');
-        Assert.areEqual(1, [SELECT COUNT() FROM Contact], 'Emprunteur retrouvé par email');
         Financing_Application__c application = [SELECT Vehicle__c, Borrower__c FROM Financing_Application__c LIMIT 1];
         Assert.areEqual(vehicle.Id, application.Vehicle__c);
-        Assert.areEqual(borrower.Id, application.Borrower__c);
+        Assert.areNotEqual(
+            borrower.Id,
+            application.Borrower__c,
+            'Un email non vérifié ne doit pas rattacher le dossier au contact d\'un vrai client'
+        );
+        Assert.areEqual(2, [SELECT COUNT() FROM Contact], 'Nouveau contact Web créé, à dédoublonner par l\'équipe');
     }
 
     @IsTest
@@ -90,7 +102,7 @@ private class FinancingApplicationApiTest {
 
         Assert.areEqual(FinancingApplicationApi.HTTP_BAD_REQUEST, RestContext.response.statusCode);
         List<Object> errors = (List<Object>) responseBody().get('errors');
-        Assert.areEqual(4, errors.size(), String.valueOf(errors));
+        Assert.areEqual(3, errors.size(), String.valueOf(errors));
     }
 
     @IsTest

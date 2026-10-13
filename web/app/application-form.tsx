@@ -31,10 +31,6 @@ export function ApplicationForm() {
           Durée (mois)
           <input name="termMonths" type="number" min="12" max="96" step="1" defaultValue="48" required />
         </label>
-        <label>
-          Taux annuel (%)
-          <input name="interestRate" type="number" min="0" step="0.01" defaultValue="4.5" required />
-        </label>
         <label className={styles.wide}>
           VIN du véhicule
           <input name="vin" maxLength={17} placeholder="JN1AZ4EH7DM430111" required className={styles.mono} />
@@ -85,6 +81,8 @@ export function ApplicationForm() {
               <strong>{STATUS_LABELS[state.application.status] ?? state.application.status}</strong>
             </p>
             <dl>
+              <dt>Taux appliqué</dt>
+              <dd>{state.application.interestRate} %</dd>
               <dt>Mensualité</dt>
               <dd>{state.application.monthlyPayment == null ? "—" : euros.format(state.application.monthlyPayment)}</dd>
               <dt>Score de risque</dt>

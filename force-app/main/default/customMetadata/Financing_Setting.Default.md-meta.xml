@@ -7,6 +7,10 @@
         <value xsi:type="xsd:double">30000</value>
     </values>
     <values>
+        <field>Default_Interest_Rate__c</field>
+        <value xsi:type="xsd:double">4.9</value>
+    </values>
+    <values>
         <field>Max_Risk_Score__c</field>
         <value xsi:type="xsd:double">100</value>
     </values>

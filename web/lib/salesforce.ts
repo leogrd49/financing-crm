@@ -10,7 +10,6 @@ import "server-only";
 export type ApplicationPayload = {
   amount: number;
   termMonths: number;
-  interestRate: number;
   vin: string;
   submit: boolean;
   borrower: {

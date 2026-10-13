@@ -22,7 +22,6 @@ function parse(formData: FormData): { payload?: ApplicationPayload; errors: stri
   const payload: ApplicationPayload = {
     amount: toNumber(text(formData, "amount")),
     termMonths: toNumber(text(formData, "termMonths")),
-    interestRate: toNumber(text(formData, "interestRate")),
     vin: text(formData, "vin").toUpperCase(),
     submit: formData.get("submit") === "on",
     borrower: {
@@ -36,7 +35,6 @@ function parse(formData: FormData): { payload?: ApplicationPayload; errors: stri
   const errors: string[] = [];
   if (!(payload.amount > 0)) errors.push("Le montant doit être un nombre positif.");
   if (!Number.isInteger(payload.termMonths)) errors.push("La durée doit être un nombre entier de mois.");
-  if (!(payload.interestRate >= 0)) errors.push("Le taux doit être un nombre positif ou nul.");
   if (!VIN_PATTERN.test(payload.vin)) errors.push("VIN invalide : 17 caractères, sans I, O ni Q.");
   if (!payload.borrower.lastName) errors.push("Le nom est obligatoire.");
   if (!payload.borrower.email.includes("@")) errors.push("L'email est invalide.");

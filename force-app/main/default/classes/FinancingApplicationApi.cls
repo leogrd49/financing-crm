@@ -5,7 +5,10 @@
  *   GET  /services/apexrest/financing-applications/{id}
  *
  * - Le véhicule est upserté par VIN (External ID) : pas de doublon, et un nouveau VIN est décodé via NHTSA.
- * - L'emprunteur est retrouvé par email, sinon créé.
+ * - Canal public, donc non fiable :
+ *     . le taux n'est JAMAIS fourni par l'appelant : il vient de Financing_Setting__mdt.Default ;
+ *     . l'emprunteur est toujours créé comme nouveau contact (LeadSource = Web), jamais rattaché à un
+ *       contact existant sur la seule foi d'un email non vérifié. Le dédoublonnage est fait par l'équipe.
  * - Tout s'exécute en mode utilisateur (WITH USER_MODE / as user) : l'appelant n'a que les droits
  *   de son permission set.
  * - Tout ou rien : en cas d'erreur, un savepoint annule ce qui a été créé.
@@ -20,11 +23,12 @@ global with sharing class FinancingApplicationApi {
     private static final Integer HTTP_BAD_REQUEST = 400;
     @TestVisible
     private static final Integer HTTP_NOT_FOUND = 404;
+    @TestVisible
+    private static final String LEAD_SOURCE_WEB = 'Web';
 
     global class ApplicationRequest {
         public Decimal amount;
         public Integer termMonths;
-        public Decimal interestRate;
         public String vin;
         public Borrower borrower;
         public Boolean submit;
@@ -61,9 +65,9 @@ global with sharing class FinancingApplicationApi {
             Financing_Application__c application = new Financing_Application__c(
                 Amount__c = input.amount,
                 Term_Months__c = input.termMonths,
-                Interest_Rate__c = input.interestRate,
+                Interest_Rate__c = getDefaultInterestRate(),
                 Vehicle__c = vehicle.Id,
-                Borrower__c = findOrCreateBorrower(input.borrower),
+                Borrower__c = createBorrower(input.borrower),
                 Status__c = input.submit == true ? 'Submitted' : 'Draft'
             );
             insert as user application;
@@ -101,9 +105,6 @@ global with sharing class FinancingApplicationApi {
         if (input.termMonths == null) {
             errors.add('termMonths est obligatoire.');
         }
-        if (input.interestRate == null) {
-            errors.add('interestRate est obligatoire.');
-        }
         if (String.isBlank(input.vin)) {
             errors.add('vin est obligatoire.');
         }
@@ -113,15 +114,28 @@ global with sharing class FinancingApplicationApi {
         return errors;
     }
 
-    private static Id findOrCreateBorrower(Borrower borrower) {
-        String email = borrower.email.trim().toLowerCase();
-        List<Contact> existing = [SELECT Id FROM Contact WHERE Email = :email WITH USER_MODE LIMIT 1];
-        if (!existing.isEmpty()) {
-            return existing[0].Id;
-        }
-        Contact contact = new Contact(FirstName = borrower.firstName, LastName = borrower.lastName, Email = email, Phone = borrower.phone);
+    private static Id createBorrower(Borrower borrower) {
+        Contact contact = new Contact(
+            FirstName = borrower.firstName,
+            LastName = borrower.lastName,
+            Email = borrower.email.trim().toLowerCase(),
+            Phone = borrower.phone,
+            LeadSource = LEAD_SOURCE_WEB
+        );
         insert as user contact;
         return contact.Id;
+    }
+
+    @TestVisible
+    private static Decimal getDefaultInterestRate() {
+        Decimal rate = Financing_Setting__mdt.getInstance('Default')?.Default_Interest_Rate__c;
+        if (rate == null) {
+            throw new FinancingApiException('Financing_Setting__mdt.Default.Default_Interest_Rate__c n\'est pas renseigné.');
+        }
+        return rate;
+    }
+
+    public class FinancingApiException extends Exception {
     }
 
     /** @return null si le dossier n'existe pas ou n'est pas visible pour l'appelant */
