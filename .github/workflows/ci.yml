@@ -18,8 +18,8 @@ jobs:
     name: LWC — lint + Jest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -34,15 +34,15 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
       - run: npm run lint
-      - run: npx tsc --noEmit
+      - run: npm run typecheck
       - run: npm run build
 
   salesforce:
@@ -57,13 +57,13 @@ jobs:
     env:
       SF_AUTH_URL: ${{ secrets.SF_AUTH_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Secret SF_AUTH_URL absent
         if: env.SF_AUTH_URL == ''
         run: 'echo "::warning::Secret SF_AUTH_URL non configuré, déploiement Salesforce ignoré."'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         if: env.SF_AUTH_URL != ''
         with:
           node-version: 22
