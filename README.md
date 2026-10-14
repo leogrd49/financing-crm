@@ -12,7 +12,17 @@ Un conseiller gère des dossiers de financement auto. Un client peut déposer un
 | Tests LWC (Jest) | **13**                                                                                                          |
 | Pipeline         | GitHub Actions : lint + Jest + build du formulaire + validation/déploiement Salesforce avec tests               |
 
-![Formulaire web connecté à Salesforce](docs/web-form.png)
+### Fiche dossier : simulateur de prêt (LWC) à droite
+
+![Fiche dossier avec le simulateur de prêt](docs/record-page.png)
+
+### Dashboard du pipeline
+
+![Dashboard Financing Pipeline](docs/dashboard.png)
+
+### Formulaire web externe (Next.js → API REST Apex)
+
+<img src="docs/web-form.png" alt="Formulaire web connecté à Salesforce" width="560">
 
 ---
 
