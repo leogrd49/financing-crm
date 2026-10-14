@@ -16,6 +16,10 @@ Un conseiller gère des dossiers de financement auto. Un client peut déposer un
 
 ![Fiche dossier avec le simulateur de prêt](docs/record-page.png)
 
+### Fiche véhicule : VIN décodé automatiquement par l'API NHTSA
+
+![Fiche véhicule décodée](docs/vehicle.png)
+
 ### Dashboard du pipeline
 
 ![Dashboard Financing Pipeline](docs/dashboard.png)

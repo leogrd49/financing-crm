@@ -2,10 +2,15 @@
 
 import { createApplication, type Application, type ApplicationPayload } from "@/lib/salesforce";
 
+/** Valeurs saisies, renvoyées au formulaire pour qu'il ne se vide pas après l'envoi */
+export type FormValues = Record<string, string>;
+
 export type FormState =
-  | { status: "idle" }
-  | { status: "success"; application: Application }
-  | { status: "error"; errors: string[] };
+  | { status: "idle"; values?: FormValues }
+  | { status: "success"; application: Application; values: FormValues }
+  | { status: "error"; errors: string[]; values: FormValues };
+
+const FIELDS = ["amount", "termMonths", "vin", "firstName", "lastName", "email", "phone", "submit"];
 
 const VIN_PATTERN = /^[A-HJ-NPR-Z0-9]{17}$/;
 
@@ -43,19 +48,20 @@ function parse(formData: FormData): { payload?: ApplicationPayload; errors: stri
 }
 
 export async function submitApplication(_previous: FormState, formData: FormData): Promise<FormState> {
+  const values: FormValues = Object.fromEntries(FIELDS.map((field) => [field, text(formData, field)]));
   const { payload, errors } = parse(formData);
   if (!payload) {
-    return { status: "error", errors };
+    return { status: "error", errors, values };
   }
 
   try {
     const result = await createApplication(payload);
     return result.ok
-      ? { status: "success", application: result.application }
-      : { status: "error", errors: result.errors };
+      ? { status: "success", application: result.application, values }
+      : { status: "error", errors: result.errors, values };
   } catch (error) {
     // Le détail technique reste dans les logs serveur, jamais renvoyé au navigateur
     console.error(error);
-    return { status: "error", errors: ["Le service est momentanément indisponible. Réessayez plus tard."] };
+    return { status: "error", errors: ["Le service est momentanément indisponible. Réessayez plus tard."], values };
   }
 }

@@ -19,6 +19,8 @@ const percent = new Intl.NumberFormat("fr-FR", { style: "percent", maximumFracti
 
 export function ApplicationForm() {
   const [state, formAction, pending] = useActionState(submitApplication, initialState);
+  // React vide le formulaire après l'envoi : on le recharge avec les valeurs saisies
+  const values = state.values ?? {};
 
   return (
     <form action={formAction} className={styles.form}>
@@ -26,15 +28,15 @@ export function ApplicationForm() {
         <legend>Votre financement</legend>
         <label>
           Montant (€)
-          <input name="amount" type="number" min="1" step="0.01" defaultValue="25000" required />
+          <input name="amount" type="number" min="1" step="0.01" defaultValue={values.amount ?? "25000"} required />
         </label>
         <label>
           Durée (mois)
-          <input name="termMonths" type="number" min="12" max="96" step="1" defaultValue="48" required />
+          <input name="termMonths" type="number" min="12" max="96" step="1" defaultValue={values.termMonths ?? "48"} required />
         </label>
         <label className={styles.wide}>
           VIN du véhicule
-          <input name="vin" maxLength={17} placeholder="JN1AZ4EH7DM430111" required className={styles.mono} />
+          <input name="vin" defaultValue={values.vin} maxLength={17} placeholder="JN1AZ4EH7DM430111" required className={styles.mono} />
         </label>
       </fieldset>
 
@@ -42,24 +44,24 @@ export function ApplicationForm() {
         <legend>Vos coordonnées</legend>
         <label>
           Prénom
-          <input name="firstName" autoComplete="given-name" />
+          <input name="firstName" defaultValue={values.firstName} autoComplete="given-name" />
         </label>
         <label>
           Nom
-          <input name="lastName" autoComplete="family-name" required />
+          <input name="lastName" defaultValue={values.lastName} autoComplete="family-name" required />
         </label>
         <label>
           Email
-          <input name="email" type="email" autoComplete="email" required />
+          <input name="email" type="email" defaultValue={values.email} autoComplete="email" required />
         </label>
         <label>
           Téléphone
-          <input name="phone" type="tel" autoComplete="tel" />
+          <input name="phone" type="tel" defaultValue={values.phone} autoComplete="tel" />
         </label>
       </fieldset>
 
       <label className={styles.checkbox}>
-        <input name="submit" type="checkbox" defaultChecked />
+        <input name="submit" type="checkbox" defaultChecked={values.submit === undefined || values.submit === "on"} />
         Soumettre directement le dossier pour étude
       </label>
 
